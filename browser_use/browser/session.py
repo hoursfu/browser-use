@@ -3398,6 +3398,12 @@ class BrowserSession(BaseModel):
 					timeout=45.0,  # 45 second timeout for DOM processing - generous for complex pages
 				)
 				self.logger.debug('✅ DOM processing completed')
+				
+				# Wait for DOM highlights to be fully rendered before proceeding
+				if self.browser_profile.highlight_elements and content.selector_map:
+					self.logger.debug('⏳ Waiting for DOM highlights to render...')
+					await asyncio.sleep(0.5)  # 500ms delay to ensure highlights are visually rendered
+					self.logger.debug('✅ DOM highlights rendered')
 			except TimeoutError:
 				self.logger.warning(f'DOM processing timed out after 45 seconds for {page.url}')
 				self.logger.warning('🔄 Falling back to minimal DOM state to allow basic navigation...')
