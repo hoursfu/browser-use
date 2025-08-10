@@ -154,7 +154,7 @@ class Controller(Generic[Context]):
 				raise Exception(f'Element index {params.index} does not exist - retry or use alternative actions')
 			
 			# Small delay to ensure DOM highlights are fully rendered before clicking
-			await asyncio.sleep(0.5)
+			await asyncio.sleep(2.0)
 
 			initial_pages = len(browser_session.tabs)
 
@@ -199,7 +199,7 @@ class Controller(Generic[Context]):
 				raise Exception(f'Element index {params.index} does not exist - retry or use alternative actions')
 			
 			# Small delay to ensure DOM highlights are fully rendered before interacting
-			await asyncio.sleep(0.5)
+			await asyncio.sleep(2.0)
 
 			try:
 				await browser_session._input_text_element_node(element_node, params.text)
@@ -228,7 +228,7 @@ class Controller(Generic[Context]):
 				raise BrowserError(f'File {params.path} does not exist')
 
 			# Small delay to ensure DOM highlights are fully rendered before interacting
-			await asyncio.sleep(0.5)
+			await asyncio.sleep(2.0)
 
 			file_upload_dom_el = await browser_session.find_file_upload_element_by_index(
 				params.index, max_height=3, max_descendant_depth=3
@@ -463,7 +463,7 @@ Explain the content of the page and that the requested information is not availa
 			# Element-specific scrolling if index is provided
 			if params.index is not None:
 				# Small delay to ensure DOM highlights are fully rendered before interacting
-				await asyncio.sleep(0.5)
+				await asyncio.sleep(2.0)
 				
 				try:
 					element_node = await browser_session.get_dom_element_by_index(params.index)
@@ -753,7 +753,7 @@ Explain the content of the page and that the requested information is not availa
 		async def get_dropdown_options(index: int, browser_session: BrowserSession) -> ActionResult:
 			"""Get all options from a native dropdown or ARIA menu"""
 			# Small delay to ensure DOM highlights are fully rendered before interacting
-			await asyncio.sleep(0.5)
+			await asyncio.sleep(2.0)
 			
 			page = await browser_session.get_current_page()
 			dom_element = await browser_session.get_dom_element_by_index(index)
@@ -873,7 +873,7 @@ Explain the content of the page and that the requested information is not availa
 		) -> ActionResult:
 			"""Select dropdown option or ARIA menu item by the text of the option you want to select"""
 			# Small delay to ensure DOM highlights are fully rendered before interacting
-			await asyncio.sleep(0.5)
+			await asyncio.sleep(2.0)
 			
 			page = await browser_session.get_current_page()
 			dom_element = await browser_session.get_dom_element_by_index(index)

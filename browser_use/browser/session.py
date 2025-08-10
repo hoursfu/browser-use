@@ -3402,7 +3402,7 @@ class BrowserSession(BaseModel):
 				# Wait for DOM highlights to be fully rendered before proceeding
 				if self.browser_profile.highlight_elements and content.selector_map:
 					self.logger.debug('⏳ Waiting for DOM highlights to render...')
-					await asyncio.sleep(0.5)  # 500ms delay to ensure highlights are visually rendered
+					await asyncio.sleep(2.0)  # 2 second delay to ensure highlights are visually rendered
 					self.logger.debug('✅ DOM highlights rendered')
 			except TimeoutError:
 				self.logger.warning(f'DOM processing timed out after 45 seconds for {page.url}')
