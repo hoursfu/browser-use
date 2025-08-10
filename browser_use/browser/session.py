@@ -2236,6 +2236,46 @@ class BrowserSession(BaseModel):
 			raise e
 		except Exception as e:
 			raise Exception(f'Failed to click element. Error: {str(e)}')
+		finally:
+			# Wait for DOM to stabilize after click to prevent race conditions
+			await self._wait_for_dom_stabilization()
+
+	async def _wait_for_dom_stabilization(self, timeout_ms: int | None = None) -> None:
+		"""
+		Wait for DOM to stabilize after an action to prevent race conditions.
+		
+		This method waits for:
+		1. Network activity to settle
+		2. DOM mutations to stop
+		3. A brief additional delay to ensure indexing is complete
+		
+		Args:
+			timeout_ms: Override timeout in milliseconds. If None, uses browser_profile.dom_stabilization_timeout
+		"""
+		page = await self.get_current_page()
+		
+		# Use configured timeout or default
+		if timeout_ms is None:
+			timeout_ms = int(self.browser_profile.dom_stabilization_timeout * 1000)
+		
+		try:
+			# Wait for network to be idle (no requests for 500ms)
+			await page.wait_for_load_state('networkidle', timeout=timeout_ms)
+		except Exception:
+			# If networkidle times out, wait for domcontentloaded at minimum
+			try:
+				await page.wait_for_load_state('domcontentloaded', timeout=min(timeout_ms, 1000))
+			except Exception:
+				pass  # Continue even if this fails
+		
+		# Additional wait for DOM mutations to settle and indexing to complete
+		# This is crucial for preventing the race condition where indices change
+		stabilization_delay = min(self.browser_profile.dom_stabilization_timeout, 2)  # 25% of timeout, max 500ms
+		await asyncio.sleep(stabilization_delay)
+		
+		# Clear the cached browser state to force fresh DOM indexing on next access
+		self._cached_browser_state_summary = None
+		self.logger.debug(f'🔄 DOM stabilization complete (waited {stabilization_delay:.1f}s + network idle)')
 
 	@time_execution_async('--get_tabs_info')
 	@retry(timeout=3, retries=1)
@@ -3358,6 +3398,12 @@ class BrowserSession(BaseModel):
 					timeout=45.0,  # 45 second timeout for DOM processing - generous for complex pages
 				)
 				self.logger.debug('✅ DOM processing completed')
+				
+				# Wait for DOM highlights to be fully rendered before proceeding
+				if self.browser_profile.highlight_elements and content.selector_map:
+					self.logger.debug('⏳ Waiting for DOM highlights to render...')
+					await asyncio.sleep(2.0)  # 2 second delay to ensure highlights are visually rendered
+					self.logger.debug('✅ DOM highlights rendered')
 			except TimeoutError:
 				self.logger.warning(f'DOM processing timed out after 45 seconds for {page.url}')
 				self.logger.warning('🔄 Falling back to minimal DOM state to allow basic navigation...')
@@ -4278,6 +4324,9 @@ class BrowserSession(BaseModel):
 				f'❌ Failed to input text into element: {repr(element_node)} on page {page_url}: {type(e).__name__}: {e}'
 			)
 			raise BrowserError(f'Failed to input text into index {element_node.highlight_index}')
+		finally:
+			# Wait for DOM to stabilize after input to prevent race conditions
+			await self._wait_for_dom_stabilization()
 
 	@require_healthy_browser(usable_page=True, reopen_page=True)
 	@time_execution_async('--switch_to_tab')

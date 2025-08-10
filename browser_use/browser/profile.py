@@ -583,7 +583,8 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
 	minimum_wait_page_load_time: float = Field(default=0.25, description='Minimum time to wait before capturing page state.')
 	wait_for_network_idle_page_load_time: float = Field(default=0.5, description='Time to wait for network idle.')
 	maximum_wait_page_load_time: float = Field(default=5.0, description='Maximum time to wait for page load.')
-	wait_between_actions: float = Field(default=0.5, description='Time to wait between actions.')
+	wait_between_actions: float = Field(default=2, description='Time to wait between actions.')
+	dom_stabilization_timeout: float = Field(default=2.0, description='Time to wait for DOM to stabilize after actions (in seconds).')
 
 	# --- UI/viewport/DOM ---
 	include_dynamic_attributes: bool = Field(default=True, description='Include dynamic attributes in selectors.')

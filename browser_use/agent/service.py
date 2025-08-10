@@ -710,10 +710,8 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 		assert self.browser_session is not None, 'BrowserSession is not set up'
 
 		self.logger.debug(f'🌐 Step {self.state.n_steps}: Getting browser state...')
-		# Capture screenshots if needed for either vision (LLM input) or GIF generation
-		should_capture_screenshot = self.settings.use_vision or bool(self.settings.generate_gif)
 		browser_state_summary = await self.browser_session.get_browser_state_with_recovery(
-			cache_clickable_elements_hashes=True, include_screenshot=should_capture_screenshot
+			cache_clickable_elements_hashes=True, include_screenshot=self.settings.use_vision
 		)
 		current_page = await self.browser_session.get_current_page()
 
@@ -1429,6 +1427,7 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 					break
 
 				if action.get_index() is not None:
+					# Force fresh DOM state to prevent stale index usage
 					new_browser_state_summary = await self.browser_session.get_browser_state_with_recovery(
 						cache_clickable_elements_hashes=False, include_screenshot=False
 					)
@@ -1440,8 +1439,8 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 					new_target = new_selector_map.get(action.get_index())  # type: ignore
 					new_target_hash = new_target.hash.branch_path_hash if new_target else None
 					if orig_target_hash != new_target_hash:
-						msg = f'Element index changed after action {i} / {len(actions)}, because page changed.'
-						logger.info(msg)
+						msg = f'Element index {action.get_index()} changed after action {i} / {len(actions)} - element may have moved or been replaced.'
+						logger.warning(msg)
 						results.append(
 							ActionResult(
 								extracted_content=msg,
@@ -1450,6 +1449,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 							)
 						)
 						break
+
+					# Update cached maps with fresh state
+					cached_selector_map = new_selector_map
+					cached_path_hashes = {e.hash.branch_path_hash for e in new_selector_map.values()}
 
 					new_path_hashes = {e.hash.branch_path_hash for e in new_selector_map.values()}
 					if check_for_new_elements and not new_path_hashes.issubset(cached_path_hashes):
